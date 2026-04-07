@@ -14,6 +14,24 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import matplotlib.patches as mpatches
+# --- IEEE PUBLICATION PLOT STYLING ---
+plt.style.use('seaborn-v0_8-whitegrid')
+plt.rcParams.update({
+    'figure.facecolor': 'white',
+    'axes.facecolor': 'white',
+    'savefig.facecolor': 'white',
+    'text.color': 'black',
+    'axes.labelcolor': 'black',
+    'xtick.color': 'black',
+    'ytick.color': 'black',
+    'axes.edgecolor': 'black',
+    'font.size': 14,          # Global font size
+    'axes.titlesize': 16,     # Title size
+    'axes.labelsize': 14,     # Axis label size
+    'xtick.labelsize': 12,
+    'ytick.labelsize': 12,
+    'legend.fontsize': 12
+})
 from matplotlib.colors import LinearSegmentedColormap
 from datetime import datetime
 warnings.filterwarnings('ignore')
@@ -107,14 +125,6 @@ trajectories = generate_trajectories(ds, n_trajectories=N_TRAJ,
 # ════════════════════════════════════════════════════════════════════════════
 
 def plot_trajectory_diagram(trajectories, ds, save_path):
-    """
-    Rich trajectory visualisation:
-      - All 50 UE paths colour-coded by mobility type
-      - BS location marker
-      - Beam gain heatmap overlay (background)
-      - Speed legend, arrow heads showing direction of travel
-      - Per-trajectory beam-switch count annotated
-    """
     MOB_COLORS = {
         'linear':      '#e74c3c',
         'random_walk': '#3498db',
@@ -124,144 +134,95 @@ def plot_trajectory_diagram(trajectories, ds, save_path):
     }
 
     fig = plt.figure(figsize=(22, 18))
-    fig.patch.set_facecolor('#0d1117')
+    fig.patch.set_facecolor('white')
 
-    gs_top = gridspec.GridSpec(1, 2, figure=fig, top=0.93, bottom=0.52,
-                               left=0.05, right=0.97, wspace=0.28)
-    gs_bot = gridspec.GridSpec(1, 3, figure=fig, top=0.46, bottom=0.05,
-                               left=0.05, right=0.97, wspace=0.32)
+    gs_top = gridspec.GridSpec(1, 2, figure=fig, top=0.93, bottom=0.52, left=0.05, right=0.97, wspace=0.28)
+    gs_bot = gridspec.GridSpec(1, 3, figure=fig, top=0.46, bottom=0.05, left=0.05, right=0.97, wspace=0.32)
 
-    # ── Panel A: All trajectories ─────────────────────────────────────────────
+    # ── Panel A: All trajectories ──
     ax_main = fig.add_subplot(gs_top[0, 0])
-    ax_main.set_facecolor('#111827')
-
-    # Background beam-gain heatmap
     locs = ds.user_locations
-    x_min, x_max = locs[:, 0].min(), locs[:, 0].max()
-    y_min, y_max = locs[:, 1].min(), locs[:, 1].max()
     gains = compute_beam_gains(ds.channels, ds.beam_codebook)
     best_gain = gains.max(axis=1)
     best_norm = (best_gain - best_gain.min()) / (np.ptp(best_gain) + 1e-9)
 
-    sc = ax_main.scatter(locs[:, 0], locs[:, 1], c=best_norm,
-                         cmap='YlOrRd', s=12, alpha=0.4, zorder=1)
+    # Use a grayscale/blues colormap for background to make colored lines pop
+    sc = ax_main.scatter(locs[:, 0], locs[:, 1], c=best_norm, cmap='Blues', s=12, alpha=0.3, zorder=1)
     plt.colorbar(sc, ax=ax_main, label='Normalised Best Beam Gain', pad=0.01)
 
-    # BS marker
     bx, by = ds.tx_location[0], ds.tx_location[1]
-    ax_main.scatter(bx, by, s=300, marker='^', color='cyan',
-                    edgecolors='white', lw=1.5, zorder=10, label='Base Station')
-    ax_main.annotate('BS', (bx, by), textcoords='offset points',
-                     xytext=(6, 6), color='cyan', fontsize=9, fontweight='bold')
+    ax_main.scatter(bx, by, s=300, marker='^', color='darkblue', edgecolors='black', lw=1.5, zorder=10)
+    ax_main.annotate('BS', (bx, by), textcoords='offset points', xytext=(6, 6), color='darkblue', fontsize=12, fontweight='bold')
 
-    # Draw each trajectory
     for traj in trajectories:
-        c   = MOB_COLORS.get(traj.mobility_type, 'white')
+        c = MOB_COLORS.get(traj.mobility_type, 'black')
         pos = traj.positions
-        ax_main.plot(pos[:, 0], pos[:, 1], color=c, lw=0.9, alpha=0.75, zorder=3)
+        ax_main.plot(pos[:, 0], pos[:, 1], color=c, lw=1.5, alpha=0.85, zorder=3)
         ax_main.scatter(*pos[0, :2],  s=20, color=c, zorder=5, marker='o')
-        ax_main.scatter(*pos[-1, :2], s=30, color='white', zorder=6, marker='x', lw=0.8)
-        # Arrow at midpoint showing direction
+        ax_main.scatter(*pos[-1, :2], s=40, color='black', zorder=6, marker='x', lw=1.2)
         mid = len(pos) // 2
         if mid > 0:
             dx = pos[mid, 0] - pos[mid-1, 0]
             dy = pos[mid, 1] - pos[mid-1, 1]
-            ax_main.annotate('', xy=(pos[mid,0]+dx, pos[mid,1]+dy),
-                             xytext=(pos[mid,0], pos[mid,1]),
-                             arrowprops=dict(arrowstyle='->', color=c, lw=1.0))
+            ax_main.annotate('', xy=(pos[mid,0]+dx, pos[mid,1]+dy), xytext=(pos[mid,0], pos[mid,1]), arrowprops=dict(arrowstyle='->', color=c, lw=1.5))
 
-    # Legend for mobility types
-    patches = [mpatches.Patch(color=v, label=k.replace('_',' ').title())
-               for k, v in MOB_COLORS.items()]
-    patches.append(mpatches.Patch(color='cyan', label='Base Station'))
-    ax_main.legend(handles=patches, loc='upper right', fontsize=8,
-                   facecolor='#1f2937', edgecolor='gray', labelcolor='white')
-    ax_main.set_title('All 50 UE Trajectories  ○=start  ✕=end',
-                      color='white', fontsize=11, pad=8)
-    ax_main.set_xlabel('x (m)', color='white'); ax_main.set_ylabel('y (m)', color='white')
-    ax_main.tick_params(colors='white'); ax_main.spines[:].set_color('#374151')
-    ax_main.set_facecolor('#111827')
+    patches = [mpatches.Patch(color=v, label=k.replace('_',' ').title()) for k, v in MOB_COLORS.items()]
+    patches.append(mpatches.Patch(color='darkblue', label='Base Station'))
+    ax_main.legend(handles=patches, loc='upper right', facecolor='white', edgecolor='black')
+    ax_main.set_title('All 50 UE Trajectories  ○=start  ✕=end', fontweight='bold', pad=8)
+    ax_main.set_xlabel('x (m)'); ax_main.set_ylabel('y (m)')
 
-    # ── Panel B: Per-trajectory beam switch count ─────────────────────────────
+    # ── Panel B: Per-trajectory beam switch count ──
     ax_sw = fig.add_subplot(gs_top[0, 1])
-    ax_sw.set_facecolor('#111827')
-
     sw_counts = [np.sum(np.diff(t.beam_indices) != 0) for t in trajectories]
     mob_types = [t.mobility_type for t in trajectories]
     bar_colors = [MOB_COLORS.get(m, 'gray') for m in mob_types]
     bar_x = np.arange(len(trajectories))
-    ax_sw.bar(bar_x, sw_counts, color=bar_colors, alpha=0.85, width=0.85)
-    ax_sw.axhline(np.mean(sw_counts), color='white', ls='--', lw=1.5,
-                  label=f'Mean = {np.mean(sw_counts):.1f}')
-    ax_sw.set_title('Beam Switch Count per Trajectory', color='white', fontsize=11)
-    ax_sw.set_xlabel('Trajectory Index', color='white')
-    ax_sw.set_ylabel('# Beam Switches', color='white')
-    ax_sw.tick_params(colors='white'); ax_sw.spines[:].set_color('#374151')
-    ax_sw.legend(facecolor='#1f2937', edgecolor='gray', labelcolor='white', fontsize=9)
+    ax_sw.bar(bar_x, sw_counts, color=bar_colors, alpha=0.85, width=0.85, edgecolor='black')
+    ax_sw.axhline(np.mean(sw_counts), color='black', ls='--', lw=2, label=f'Mean = {np.mean(sw_counts):.1f}')
+    ax_sw.set_title('Beam Switch Count per Trajectory', fontweight='bold')
+    ax_sw.set_xlabel('Trajectory Index'); ax_sw.set_ylabel('# Beam Switches')
+    ax_sw.legend(facecolor='white', edgecolor='black')
 
-    # ── Panel C: Beam index timeline for 5 sample trajectories ───────────────
+    # ── Panel C: Beam index timeline ──
     ax_beam = fig.add_subplot(gs_bot[0, 0])
-    ax_beam.set_facecolor('#111827')
     sample_ids = [0, 10, 20, 30, 40]
     t_axis = np.arange(N_STEPS)
     for i, sid in enumerate(sample_ids):
         traj = trajectories[sid]
-        c    = MOB_COLORS.get(traj.mobility_type, 'white')
-        offset = i * 5   # stack vertically for readability
-        ax_beam.step(t_axis, traj.beam_indices + offset, where='post',
-                     color=c, lw=1.2, label=f"T{sid} ({traj.mobility_type[:3]})")
-    ax_beam.set_title('Beam Index vs Time (5 trajectories)', color='white', fontsize=10)
-    ax_beam.set_xlabel('Time Step', color='white'); ax_beam.set_ylabel('Beam Index', color='white')
-    ax_beam.tick_params(colors='white'); ax_beam.spines[:].set_color('#374151')
-    ax_beam.legend(fontsize=7, facecolor='#1f2937', edgecolor='gray', labelcolor='white')
+        c = MOB_COLORS.get(traj.mobility_type, 'black')
+        ax_beam.step(t_axis, traj.beam_indices + (i*5), where='post', color=c, lw=2, label=f"T{sid} ({traj.mobility_type[:3]})")
+    ax_beam.set_title('Beam Index vs Time (5 trajectories)', fontweight='bold')
+    ax_beam.set_xlabel('Time Step'); ax_beam.set_ylabel('Beam Index')
+    ax_beam.legend(facecolor='white', edgecolor='black')
 
-    # ── Panel D: Beam gain heatmap (trajectory 0) ────────────────────────────
+    # ── Panel D: Beam gain heatmap ──
     ax_hm = fig.add_subplot(gs_bot[0, 1])
-    cmap  = LinearSegmentedColormap.from_list('beam', ['#0d1117','#1d4ed8','#f59e0b','#ef4444'])
-    im    = ax_hm.imshow(trajectories[0].beam_gains[:N_STEPS].T,
-                         aspect='auto', origin='lower', cmap=cmap)
-    ax_hm.plot(np.arange(N_STEPS), trajectories[0].beam_indices, 'w--', lw=1.2, label='Best Beam')
+    cmap = plt.cm.viridis
+    im = ax_hm.imshow(trajectories[0].beam_gains[:N_STEPS].T, aspect='auto', origin='lower', cmap=cmap)
+    ax_hm.plot(np.arange(N_STEPS), trajectories[0].beam_indices, color='black', ls='--', lw=2, label='Best Beam')
     plt.colorbar(im, ax=ax_hm, label='Beam Gain')
-    ax_hm.set_title('Beam Gain Heatmap — Trajectory 0', color='white', fontsize=10)
-    ax_hm.set_xlabel('Time Step', color='white'); ax_hm.set_ylabel('Beam Index', color='white')
-    ax_hm.tick_params(colors='white'); ax_hm.spines[:].set_color('#374151')
-    ax_hm.legend(fontsize=8, facecolor='#1f2937', edgecolor='gray', labelcolor='white')
-    ax_hm.set_facecolor('#111827')
+    ax_hm.set_title('Beam Gain Heatmap — Trajectory 0', fontweight='bold')
+    ax_hm.set_xlabel('Time Step'); ax_hm.set_ylabel('Beam Index')
+    ax_hm.legend(facecolor='white', edgecolor='black')
 
-    # ── Panel E: Velocity distribution ───────────────────────────────────────
+    # ── Panel E: Velocity distribution ──
     ax_vel = fig.add_subplot(gs_bot[0, 2])
-    ax_vel.set_facecolor('#111827')
     vel_by_type = {}
     for traj in trajectories:
         vel_by_type.setdefault(traj.mobility_type, []).append(traj.velocity)
-    mob_order = ['pedestrian' if k=='random_walk' else k for k in MOB_COLORS]
     for mob, vels in vel_by_type.items():
-        c = MOB_COLORS.get(mob, 'white')
-        ax_vel.scatter([mob.replace('_',' ')]*len(vels), vels,
-                       color=c, alpha=0.7, s=60, edgecolors='white', lw=0.5)
-        ax_vel.plot([mob.replace('_',' ')]*2,
-                    [np.mean(vels)-np.std(vels), np.mean(vels)+np.std(vels)],
-                    color=c, lw=2)
-        ax_vel.scatter(mob.replace('_',' '), np.mean(vels),
-                       color='white', s=100, zorder=10, marker='D')
-    ax_vel.set_title('Velocity Distribution by Mobility Type', color='white', fontsize=10)
-    ax_vel.set_xlabel('Mobility Pattern', color='white')
-    ax_vel.set_ylabel('Velocity (m/s)', color='white')
-    ax_vel.tick_params(colors='white', axis='x', rotation=20)
-    ax_vel.tick_params(colors='white', axis='y')
-    ax_vel.spines[:].set_color('#374151')
+        c = MOB_COLORS.get(mob, 'black')
+        ax_vel.scatter([mob.replace('_',' ')]*len(vels), vels, color=c, alpha=0.7, s=60, edgecolors='black', lw=0.5)
+        ax_vel.plot([mob.replace('_',' ')]*2, [np.mean(vels)-np.std(vels), np.mean(vels)+np.std(vels)], color=c, lw=2)
+        ax_vel.scatter(mob.replace('_',' '), np.mean(vels), color='black', s=100, zorder=10, marker='D')
+    ax_vel.set_title('Velocity Distribution by Mobility Type', fontweight='bold')
+    ax_vel.set_xlabel('Mobility Pattern'); ax_vel.set_ylabel('Velocity (m/s)')
+    ax_vel.tick_params(axis='x', rotation=20)
 
-    fig.suptitle('DeepMIMO 140 GHz  |  Multi-User Trajectory Generation  |  6G Beam Switching',
-                 color='white', fontsize=14, fontweight='bold', y=0.97)
-
-    plt.savefig(save_path, dpi=150, bbox_inches='tight', facecolor='#0d1117')
+    fig.suptitle('DeepMIMO 140 GHz | Multi-User Trajectory Generation | 6G Beam Switching', fontsize=18, fontweight='bold', y=0.97)
+    plt.savefig(save_path, dpi=150, bbox_inches='tight', facecolor='white')
     plt.close()
-    print(f"  [Plot] Trajectory diagram → {save_path}")
-
-
-traj_plot = os.path.join(RUN_DIR, '1_trajectory_diagram.png')
-plot_trajectory_diagram(trajectories, ds, traj_plot)
-
 
 # ════════════════════════════════════════════════════════════════════════════
 # STEP 3 — SEQUENCES + DATALOADERS
@@ -310,90 +271,76 @@ print_metrics(metrics)
 
 def plot_training_results(history, metrics, trajectories, save_path):
     fig = plt.figure(figsize=(22, 14))
-    fig.patch.set_facecolor('#0d1117')
-    gs  = gridspec.GridSpec(2, 4, figure=fig, hspace=0.42, wspace=0.35,
-                            top=0.92, bottom=0.08, left=0.06, right=0.97)
+    fig.patch.set_facecolor('white')
+    gs = gridspec.GridSpec(2, 4, figure=fig, hspace=0.42, wspace=0.35, top=0.92, bottom=0.08, left=0.06, right=0.97)
 
-    def dark_ax(ax):
-        ax.set_facecolor('#111827')
-        ax.tick_params(colors='white')
-        ax.spines[:].set_color('#374151')
-        ax.xaxis.label.set_color('white')
-        ax.yaxis.label.set_color('white')
-        ax.title.set_color('white')
+    def style_ax(ax):
+        ax.set_facecolor('white')
+        ax.grid(True, alpha=0.3, color='gray')
         return ax
 
     ep = range(1, len(history.train_loss) + 1)
 
     # (1) Loss
-    ax = dark_ax(fig.add_subplot(gs[0, 0]))
-    ax.plot(ep, history.train_loss, '#60a5fa', lw=2, label='Train')
-    ax.plot(ep, history.val_loss,   '#f87171', lw=2, ls='--', label='Val')
-    ax.fill_between(ep, history.train_loss, history.val_loss, alpha=0.1, color='#a78bfa')
-    ax.set_title('Loss'); ax.set_xlabel('Epoch'); ax.set_ylabel('Loss')
-    ax.legend(facecolor='#1f2937', edgecolor='gray', labelcolor='white', fontsize=9)
-    ax.grid(True, alpha=0.15)
+    ax = style_ax(fig.add_subplot(gs[0, 0]))
+    ax.plot(ep, history.train_loss, '#2563eb', lw=2.5, label='Train')
+    ax.plot(ep, history.val_loss, '#dc2626', lw=2.5, ls='--', label='Val')
+    ax.fill_between(ep, history.train_loss, history.val_loss, alpha=0.1, color='#8b5cf6')
+    ax.set_title('Loss', fontweight='bold'); ax.set_xlabel('Epoch'); ax.set_ylabel('Loss')
+    ax.legend(facecolor='white', edgecolor='black')
 
     # (2) Accuracy
-    ax = dark_ax(fig.add_subplot(gs[0, 1]))
-    ax.plot(ep, [a*100 for a in history.train_acc], '#60a5fa', lw=2, label='Train Top-1')
-    ax.plot(ep, [a*100 for a in history.val_acc],   '#f87171', lw=2, ls='--', label='Val Top-1')
-    ax.plot(ep, [a*100 for a in history.val_topk],  '#34d399', lw=2, ls='-.', label='Val Top-5')
-    ax.set_title('Beam Prediction Accuracy'); ax.set_xlabel('Epoch'); ax.set_ylabel('Accuracy (%)')
-    ax.legend(facecolor='#1f2937', edgecolor='gray', labelcolor='white', fontsize=8)
-    ax.grid(True, alpha=0.15)
+    ax = style_ax(fig.add_subplot(gs[0, 1]))
+    ax.plot(ep, [a*100 for a in history.train_acc], '#2563eb', lw=2.5, label='Train Top-1')
+    ax.plot(ep, [a*100 for a in history.val_acc], '#dc2626', lw=2.5, ls='--', label='Val Top-1')
+    ax.plot(ep, [a*100 for a in history.val_topk], '#059669', lw=2.5, ls='-.', label='Val Top-5')
+    ax.set_title('Beam Prediction Accuracy', fontweight='bold'); ax.set_xlabel('Epoch'); ax.set_ylabel('Accuracy (%)')
+    ax.legend(facecolor='white', edgecolor='black')
 
     # (3) Spike rate
-    ax = dark_ax(fig.add_subplot(gs[0, 2]))
-    ax.plot(ep, [s*100 for s in history.spike_rates], '#c084fc', lw=2)
-    ax.axhline(15, color='#fbbf24', ls='--', lw=1.5, label='Target 15%')
-    ax.axhspan(10, 20, alpha=0.12, color='#34d399')
-    ax.set_title('Spike Rate (LIF Layer 2)'); ax.set_xlabel('Epoch'); ax.set_ylabel('Spike Rate (%)')
-    ax.legend(facecolor='#1f2937', edgecolor='gray', labelcolor='white', fontsize=9)
-    ax.grid(True, alpha=0.15)
+    ax = style_ax(fig.add_subplot(gs[0, 2]))
+    ax.plot(ep, [s*100 for s in history.spike_rates], '#9333ea', lw=2.5)
+    ax.axhline(15, color='red', ls='--', lw=2, label='Target 15%')
+    ax.axhspan(10, 20, alpha=0.15, color='#10b981')
+    ax.set_title('Spike Rate (LIF Layer 2)', fontweight='bold'); ax.set_xlabel('Epoch'); ax.set_ylabel('Spike Rate (%)')
+    ax.legend(facecolor='white', edgecolor='black')
 
     # (4) LR schedule
-    ax = dark_ax(fig.add_subplot(gs[0, 3]))
-    ax.plot(ep, history.lr_history, '#fb923c', lw=2)
-    ax.set_title('Learning Rate Schedule'); ax.set_xlabel('Epoch'); ax.set_ylabel('LR')
-    ax.set_yscale('log'); ax.grid(True, alpha=0.15)
+    ax = style_ax(fig.add_subplot(gs[0, 3]))
+    ax.plot(ep, history.lr_history, '#ea580c', lw=2.5)
+    ax.set_title('Learning Rate Schedule', fontweight='bold'); ax.set_xlabel('Epoch'); ax.set_ylabel('LR')
+    ax.set_yscale('log')
 
     # (5) Top-K accuracy bars
-    ax = dark_ax(fig.add_subplot(gs[1, 0]))
-    tk_vals  = [metrics.top1_acc*100, metrics.top3_acc*100, metrics.top5_acc*100]
-    tk_clrs  = ['#60a5fa', '#34d399', '#fbbf24']
-    bars = ax.bar(['Top-1','Top-3','Top-5'], tk_vals, color=tk_clrs, edgecolor='#374151', width=0.5)
+    ax = style_ax(fig.add_subplot(gs[1, 0]))
+    tk_vals = [metrics.top1_acc*100, metrics.top3_acc*100, metrics.top5_acc*100]
+    tk_clrs = ['#3b82f6', '#10b981', '#f59e0b']
+    bars = ax.bar(['Top-1','Top-3','Top-5'], tk_vals, color=tk_clrs, edgecolor='black', width=0.5, alpha=0.9)
     for b, v in zip(bars, tk_vals):
-        ax.text(b.get_x()+b.get_width()/2, v+0.8, f'{v:.1f}%',
-                ha='center', va='bottom', color='white', fontweight='bold', fontsize=11)
-    ax.set_ylim(0, 115); ax.set_title('Top-K Beam Accuracy'); ax.set_ylabel('Accuracy (%)')
-    ax.grid(True, alpha=0.15, axis='y')
+        ax.text(b.get_x()+b.get_width()/2, v+1.5, f'{v:.1f}%', ha='center', va='bottom', color='black', fontweight='bold', fontsize=12)
+    ax.set_ylim(0, 115); ax.set_title('Top-K Beam Accuracy', fontweight='bold'); ax.set_ylabel('Accuracy (%)')
 
     # (6) Spectral efficiency
-    ax = dark_ax(fig.add_subplot(gs[1, 1]))
+    ax = style_ax(fig.add_subplot(gs[1, 1]))
     se_vals = [metrics.avg_se_random, metrics.avg_se_snn, metrics.avg_se_oracle]
-    se_clrs = ['#f87171', '#34d399', '#60a5fa']
-    bars = ax.bar(['Random\nBaseline','R-SNN\nPredicted','Oracle\n(GT)'],
-                  se_vals, color=se_clrs, edgecolor='#374151', width=0.5)
+    se_clrs = ['#ef4444', '#10b981', '#3b82f6']
+    bars = ax.bar(['Random\nBaseline','R-SNN\nPredicted','Oracle\n(GT)'], se_vals, color=se_clrs, edgecolor='black', width=0.5, alpha=0.9)
     for b, v in zip(bars, se_vals):
-        ax.text(b.get_x()+b.get_width()/2, v+0.03, f'{v:.2f}',
-                ha='center', va='bottom', color='white', fontweight='bold', fontsize=11)
+        ax.text(b.get_x()+b.get_width()/2, v+0.05, f'{v:.2f}', ha='center', va='bottom', color='black', fontweight='bold', fontsize=12)
     gain_pct = metrics.spectral_eff_gain * 100
-    ax.set_title(f'Spectral Efficiency  (+{gain_pct:.1f}% vs random)')
-    ax.set_ylabel('SE (bits/s/Hz)'); ax.grid(True, alpha=0.15, axis='y')
+    ax.set_title(f'Spectral Efficiency (+{gain_pct:.1f}% vs random)', fontweight='bold'); ax.set_ylabel('SE (bits/s/Hz)')
 
     # (7) Beam switch count histogram
-    ax = dark_ax(fig.add_subplot(gs[1, 2]))
+    ax = style_ax(fig.add_subplot(gs[1, 2]))
     sw = [np.sum(np.diff(t.beam_indices) != 0) for t in trajectories]
-    ax.hist(sw, bins=15, color='#a78bfa', edgecolor='#374151', alpha=0.9)
-    ax.axvline(np.mean(sw), color='#fbbf24', ls='--', lw=2, label=f'Mean={np.mean(sw):.1f}')
-    ax.set_title('Beam Switch Distribution'); ax.set_xlabel('# Switches'); ax.set_ylabel('Count')
-    ax.legend(facecolor='#1f2937', edgecolor='gray', labelcolor='white', fontsize=9)
-    ax.grid(True, alpha=0.15)
+    ax.hist(sw, bins=15, color='#8b5cf6', edgecolor='black', alpha=0.8)
+    ax.axvline(np.mean(sw), color='red', ls='--', lw=2.5, label=f'Mean={np.mean(sw):.1f}')
+    ax.set_title('Beam Switch Distribution', fontweight='bold'); ax.set_xlabel('# Switches'); ax.set_ylabel('Count')
+    ax.legend(facecolor='white', edgecolor='black')
 
     # (8) Metrics summary text box
     ax = fig.add_subplot(gs[1, 3])
-    ax.set_facecolor('#111827'); ax.axis('off')
+    ax.set_facecolor('white'); ax.axis('off')
     summary = (
         f"  SUMMARY\n"
         f"  {'─'*28}\n"
@@ -409,21 +356,11 @@ def plot_training_results(history, metrics, trajectories, save_path):
         f"  Epochs trained    {len(history.train_loss):6d}\n"
         f"  Device            {'GPU' if torch.cuda.is_available() else 'CPU':>6}\n"
     )
-    ax.text(0.05, 0.95, summary, transform=ax.transAxes,
-            fontfamily='monospace', fontsize=10, color='#e2e8f0',
-            verticalalignment='top',
-            bbox=dict(boxstyle='round', facecolor='#1e293b', edgecolor='#4b5563', alpha=0.9))
+    ax.text(0.05, 0.95, summary, transform=ax.transAxes, fontfamily='monospace', fontsize=12, color='black', verticalalignment='top', bbox=dict(boxstyle='round,pad=0.5', facecolor='#f8fafc', edgecolor='black', lw=1.5))
 
-    fig.suptitle('R-SNN Training Results  |  DeepMIMO 140 GHz  |  6G Beam Switching',
-                 color='white', fontsize=13, fontweight='bold', y=0.97)
-    plt.savefig(save_path, dpi=150, bbox_inches='tight', facecolor='#0d1117')
+    fig.suptitle('R-SNN Training Results | DeepMIMO 140 GHz | 6G Beam Switching', fontsize=18, fontweight='bold', y=0.97)
+    plt.savefig(save_path, dpi=150, bbox_inches='tight', facecolor='white')
     plt.close()
-    print(f"  [Plot] Training results  → {save_path}")
-
-
-result_plot = os.path.join(RUN_DIR, '2_training_results.png')
-plot_training_results(history, metrics, trajectories, result_plot)
-
 
 # ════════════════════════════════════════════════════════════════════════════
 # SAVE METRICS AS TEXT
