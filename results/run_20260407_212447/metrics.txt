@@ -1,0 +1,29 @@
+Run ID: 20260407_212447
+Dataset: G:\Shree\6G Beam Switching enabled by SNN\6G Dataset creation\deepmimo_scenarios\O1_140
+Device: CPU
+
+=== CONFIGURATION ===
+N_TRAJ=50  N_STEPS=100  SEQ_LEN=20
+N_BEAMS=64  EPOCHS=40  LR=0.0005  BATCH=32
+
+=== BEAM PREDICTION ACCURACY ===
+Top-1: 95.40%
+Top-3: 99.56%
+Top-5: 99.82%
+
+=== SPECTRAL EFFICIENCY ===
+Random Baseline: 2.2469 bits/s/Hz
+R-SNN Predicted: 6.6332 bits/s/Hz
+Oracle (GT):     6.6582 bits/s/Hz
+Gain vs Random:  +195.22%
+
+=== BEAM SWITCHING ===
+Avg switches/trajectory: 1.72
+Switch rate:             0.0172
+
+=== TRAINING HISTORY ===
+Epochs completed: 39
+Best val loss:    0.4819
+Best val Top-1:   95.58%
+Best val Top-5:   100.00%
+Final spike rate: 39.47%
