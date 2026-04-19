@@ -49,6 +49,8 @@ LR          = 5e-4     # learning rate
 BATCH       = 32       # batch size
 T_INDEX     = 0        # time snapshot index (0 = first available)
 TX_INDEX    = 0        # BS index (0 = first)
+LAMBDA_SPK  = 0.0
+LAMBDA_TOPK = 0.0
 # ─────────────────────────────────────────────────────────────────────────────
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -63,7 +65,7 @@ from snn_model import build_model
 from trainer import build_dataloaders, train, evaluate_on_trajectories, print_metrics
 
 os.makedirs(RESULTS_DIR, exist_ok=True)
-RUN_ID   = datetime.now().strftime("%Y%m%d_%H%M%S")
+RUN_ID   = datetime.now().strftime("%Y%m%d_%H%M%S") + f"_Ablation_Spk{LAMBDA_SPK}_TopK{LAMBDA_TOPK}"
 RUN_DIR  = os.path.join(RESULTS_DIR, f"run_{RUN_ID}")
 os.makedirs(RUN_DIR, exist_ok=True)
 print(f"\n{'='*65}")
@@ -254,7 +256,8 @@ save_path = os.path.join(RUN_DIR, 'best_snn_beam.pt')
 print(f"\n[Step 5] Training for up to {EPOCHS} epochs ...")
 history = train(model, train_loader, val_loader,
                 n_epochs=EPOCHS, lr=LR, device=device,
-                patience=10, save_path=save_path)
+                patience=10, save_path=save_path,
+                lambda_spk=LAMBDA_SPK, lambda_topk=LAMBDA_TOPK)
 
 
 # ════════════════════════════════════════════════════════════════════════════

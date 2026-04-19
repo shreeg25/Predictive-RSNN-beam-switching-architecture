@@ -75,9 +75,11 @@ def train(
     device: torch.device = torch.device('cpu'),
     patience: int = 8,
     save_path: str = 'best_snn_beam.pt',
+    lambda_spk: float = 1e-3,  # <--- ADDED FOR ABLATION
+    lambda_topk: float = 0.1,  # <--- ADDED FOR ABLATION
 ) -> TrainingHistory:
 
-    criterion = BeamSNNLoss(n_beams=model.n_beams, lambda_spk=1e-3, lambda_topk=0.1)
+    criterion = BeamSNNLoss(n_beams=model.n_beams, lambda_spk=lambda_spk, lambda_topk=lambda_topk)
     optimizer = optim.AdamW(model.parameters(), lr=lr, weight_decay=1e-4)
     scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=n_epochs, eta_min=1e-6)
 
