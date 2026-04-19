@@ -1,0 +1,29 @@
+Run ID: 20260419_160518_Ablation_Spk0.001_TopK0.0
+Dataset: G:\Shree\6G Beam Switching enabled by SNN\6G Dataset creation\deepmimo_scenarios\O1_140
+Device: GPU
+
+=== CONFIGURATION ===
+N_TRAJ=50  N_STEPS=100  SEQ_LEN=20
+N_BEAMS=64  EPOCHS=40  LR=0.0005  BATCH=32
+
+=== BEAM PREDICTION ACCURACY ===
+Top-1: 95.76%
+Top-3: 99.52%
+Top-5: 99.78%
+
+=== SPECTRAL EFFICIENCY ===
+Random Baseline: 2.2469 bits/s/Hz
+R-SNN Predicted: 6.6335 bits/s/Hz
+Oracle (GT):     6.6582 bits/s/Hz
+Gain vs Random:  +195.23%
+
+=== BEAM SWITCHING ===
+Avg switches/trajectory: 1.90
+Switch rate:             0.0190
+
+=== TRAINING HISTORY ===
+Epochs completed: 36
+Best val loss:    0.1555
+Best val Top-1:   95.04%
+Best val Top-5:   100.00%
+Final spike rate: 41.39%
