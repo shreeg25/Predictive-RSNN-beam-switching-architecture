@@ -49,7 +49,7 @@ LR          = 5e-4     # learning rate
 BATCH       = 32       # batch size
 T_INDEX     = 0        # time snapshot index (0 = first available)
 TX_INDEX    = 0        # BS index (0 = first)
-LAMBDA_SPK  = 0
+LAMBDA_SPK  = 1e-3
 LAMBDA_TOPK = 0.0
 # ─────────────────────────────────────────────────────────────────────────────
 
