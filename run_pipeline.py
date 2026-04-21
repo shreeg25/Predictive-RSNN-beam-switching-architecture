@@ -26,12 +26,12 @@ plt.rcParams.update({
     'xtick.color': 'black',
     'ytick.color': 'black',
     'axes.edgecolor': 'black',
-    'font.size': 18,          # Base font size (was 14)
-    'axes.titlesize': 20,     # Subplot titles (was 16)
-    'axes.labelsize': 18,     # X/Y axis labels (was 14)
-    'xtick.labelsize': 16,    # Axis tick numbers (was 12)
-    'ytick.labelsize': 16,    # Axis tick numbers (was 12)
-    'legend.fontsize': 16     # Legend text (was 12)
+    'font.size': 20,          # Base font size (was 14)
+    'axes.titlesize': 22,     # Subplot titles (was 16)
+    'axes.labelsize': 20,     # X/Y axis labels (was 14)
+    'xtick.labelsize': 18,    # Axis tick numbers (was 12)
+    'ytick.labelsize': 18,    # Axis tick numbers (was 12)
+    'legend.fontsize': 18     # Legend text (was 12)
 })
 from matplotlib.colors import LinearSegmentedColormap
 from datetime import datetime
@@ -139,7 +139,7 @@ def plot_trajectory_diagram(trajectories, ds, save_path):
     fig = plt.figure(figsize=(22, 18))
     fig.patch.set_facecolor('white')
 
-    gs_top = gridspec.GridSpec(1, 2, figure=fig, top=0.93, bottom=0.52, left=0.05, right=0.97, wspace=0.28)
+    gs_top = gridspec.GridSpec(1, 2, figure=fig, top=0.88, bottom=0.52, left=0.05, right=0.97, wspace=0.28)
     gs_bot = gridspec.GridSpec(1, 3, figure=fig, top=0.46, bottom=0.05, left=0.05, right=0.97, wspace=0.32)
 
     # ── Panel A: All trajectories ──
@@ -171,8 +171,19 @@ def plot_trajectory_diagram(trajectories, ds, save_path):
 
     patches = [mpatches.Patch(color=v, label=k.replace('_',' ').title()) for k, v in MOB_COLORS.items()]
     patches.append(mpatches.Patch(color='darkblue', label='Base Station'))
-    ax_main.legend(handles=patches, loc='upper right', facecolor='white', edgecolor='black')
-    ax_main.set_title('All 50 UE Trajectories  ○=start  ✕=end', fontweight='bold', pad=8)
+    # --- UPDATED HORIZONTAL LEGEND ABOVE PLOT ---
+    ax_main.legend(
+        handles=patches,
+        loc='lower center',           # Anchors the bottom of the legend...
+        bbox_to_anchor=(0.5, 1.06),   # ...to just above the top middle of the plot area
+        ncol=6,                       # Spreads the 5 mobility types + BS horizontally
+        facecolor='white',            # Pure white background
+        framealpha=1.0,               # 100% opaque so no grid lines bleed through
+        edgecolor='black',            # Crisp border
+        fontsize=16,                  # Large, readable font
+        columnspacing=1.5             # Adds breathing room between labels
+    )
+    ax_main.set_title('All 250 UE Trajectories  ○=start  ✕=end', fontweight='bold', pad=8)
     ax_main.set_xlabel('x (m)'); ax_main.set_ylabel('y (m)')
 
     # ── Panel B: Per-trajectory beam switch count ──
@@ -224,7 +235,7 @@ def plot_trajectory_diagram(trajectories, ds, save_path):
     ax_vel.tick_params(axis='x', rotation=20)
 
     fig.suptitle('DeepMIMO 140 GHz | Multi-User Trajectory Generation | 6G Beam Switching', 
-             fontsize=24, fontweight='bold', y=0.97)
+             fontsize=24, fontweight='bold', y=0.99)
     plt.savefig(save_path, dpi=150, bbox_inches='tight', facecolor='white')
     plt.close()
 
